@@ -7,29 +7,45 @@ from collections import Counter
 
 # INITIALIZE TEAM OBJECTS #
 # init team_1 players
-t1_f = pd.DataFrame({'lw': [93, 90, 87, 85],
-                      'c': [93, 90, 87, 85],
-                     'rw': [93, 90, 87, 85]})
-t1_d = pd.DataFrame({'ld': [93, 90, 87, 85],
-                     'rd': [93, 90, 87, 85]})
-t1_g = [93, 83]
-t1_f_overall = t1_f.sum().sum() / 12
-t1_d_overall = t1_d.sum().sum() / 6
+# forwards
+t1_f_lw = [90, 87, 85, 83]
+t1_f_c = [90, 87, 85, 83]
+t1_f_rw = [90, 87, 85, 83]
+t1_f = pd.DataFrame({'lw': t1_f_lw, 'c': t1_f_c, 'rw': t1_f_rw})
+# defense
+t1_d_ld = [90, 85, 83]
+t1_d_rd = [90, 85, 83]
+t1_d = pd.DataFrame({'ld': t1_d_ld, 'rd': t1_d_rd})
+# goalies
+t1_g = [90, 83]
+# init team_1 overalls
+t1_f_overall = (t1_f.loc[0].mean() * .325) + (t1_f.loc[1].mean() * .275) \
+               + (t1_f.loc[2].mean() * .2) + (t1_f.loc[3].mean() * .175)
+t1_d_overall = (t1_d.loc[0].mean() * .395) + (t1_d.loc[1].mean() * .335) + (t1_d.loc[2].mean() * .27)
 t1_g_overall = t1_g[0]
+
 # init team_2 players
-t2_f = pd.DataFrame({'lw': [85, 83, 80, 77],
-                      'c': [85, 83, 80, 77],
-                     'rw': [85, 83, 80, 77]})
-t2_d = pd.DataFrame({'ld': [85, 83, 80, 77],
-                     'rd': [85, 83, 80, 77]})
-t2_g = [83, 80]
-t2_f_overall = t2_f.sum().sum() / 12
-t2_d_overall = t2_d.sum().sum() / 6
+# forwards
+t2_f_lw = [90, 87, 85, 83]
+t2_f_c = [90, 87, 85, 83]
+t2_f_rw = [90, 87, 85, 83]
+t2_f = pd.DataFrame({'lw': t2_f_lw, 'c': t2_f_c, 'rw': t2_f_rw})
+# defense
+t2_d_ld = [90, 85, 83]
+t2_d_rd = [90, 85, 83]
+t2_d = pd.DataFrame({'ld': t2_d_ld, 'rd': t2_d_rd})
+# goalies
+t2_g = [90, 83]
+# init team_2 overalls
+t2_f_overall = (t2_f.loc[0].mean() * .325) + (t2_f.loc[1].mean() * .275) \
+               + (t2_f.loc[2].mean() * .2) + (t2_f.loc[3].mean() * .175)
+t2_d_overall = (t2_d.loc[0].mean() * .395) + (t2_d.loc[1].mean() * .335) + (t2_d.loc[2].mean() * .27)
 t2_g_overall = t2_g[0]
+
 # init core weights
-forward_weight = .875
-defense_weight = .825
-goalie_weight = .90
+forward_weight = .985
+defense_weight = .96
+goalie_weight = 1
 # init core weighted strengths
 t1_f_strength = (t1_f_overall * forward_weight)
 t1_d_strength = (t1_d_overall * defense_weight)
@@ -44,20 +60,20 @@ print(team_1, team_2)
 
 
 # DEFINE GAME ENGINE #
-def game_engine(t1, t2):
+def game_engine(t1=team_1, t2=team_2):
 
-    # init gamescore
-    def score_generator(t1, t2):
-        gamescores = np.random.normal(loc=.25, scale=.21, size=(1, 2))
-        gamescores = gamescores.tolist()
-        t1_gamescore = t1 * gamescores[0][0]
-        t2_gamescore = t2 * gamescores[0][1]
+    # init gamescore    ===    x=loc, y=scale, scoring_rate(lower for higher scoring)
+    def score_generator(t_1, t_2, x=.168, y=.125, avg_team=85, scoring_rate=6):  #
+        # generate gamescores
+        t_1_dif = float((t_1 - avg_team) / 100)
+        t_1_gamescore = np.random.normal(loc=(x+t_1_dif), scale=y) * 100
+        t_2_dif = float((t_2 - avg_team) / 100)
+        t_2_gamescore = np.random.normal(loc=(x+t_2_dif), scale=y) * 100
         # init scoring variables
-        scoring_rate = 7.4  # lower for a higher score
-        t1_score = round(t1_gamescore / scoring_rate)
-        t2_score = round(t2_gamescore / scoring_rate)
-        team_scores = [t1_score, t2_score]
-        return team_scores
+        t_1_score = round(t_1_gamescore / scoring_rate)
+        t_2_score = round(t_2_gamescore / scoring_rate)
+        t_scores = [t_1_score, t_2_score]
+        return t_scores
 
     # init score values
     team_scores = score_generator(t1, t2)
@@ -76,7 +92,7 @@ def game_engine(t1, t2):
     # overtime
     ot = False
     if final_scores[0] == final_scores[1]:
-        tie_breaker = score_generator(t1, t2)
+        tie_breaker = score_generator(t1, t2, x=0, y=.05)
         if tie_breaker[0] > tie_breaker[1]:
             final_scores[0] += 1
         elif tie_breaker[0] < tie_breaker[1]:
@@ -86,14 +102,16 @@ def game_engine(t1, t2):
 
 
 # TEST #
-def simulation_test(t_1, t_2, n):
+def simulation_test(t1=team_1, t2=team_2, n=100000):
+    # init variables
     test_scores = []
     t1_wins = 0
     t2_wins = 0
     ties = 0
     ot_games = 0
+    # calculate win totals
     for i in range(n):
-        score, ot = game_engine(t_1, t_2)
+        score, ot = game_engine(t1, t2)
         goals = score[0] + score[1]
         test_scores.append(goals)
         if score[0] > score[1]:
@@ -102,7 +120,7 @@ def simulation_test(t_1, t_2, n):
             t2_wins += 1
         else:
             ties += 1
-        if ot == True:
+        if ot:
             ot_games += 1
     # score counts
     counter = Counter(test_scores)
@@ -117,18 +135,16 @@ def simulation_test(t_1, t_2, n):
     for i in range(len(goals)):
         total_goals += (goals[i] * counts[i])
     average_goals = total_goals / 100000
-    print(average_goals)
+    print('goals_per_game: ' + str(average_goals))
     # print win totals
-    print('t1_wins: ' + str(t1_wins))
-    print('t2_wins: ' + str(t2_wins))
-    print('ot_games: ' + str(ot_games))
-    print('ties: ' + str(ties))
+    print('t1_wins: ' + str(t1_wins) + '  | ', ('t2_wins: ' + str(t2_wins)))
+    print('ot_games: ' + str(ot_games) + ' | ', ('ties: ' + str(ties)))
     print('t1_win_share: ' + str(round((t1_wins / (n - ties)), 2)))
     # plot results
     plt.bar(goals, counts)
     plt.xticks(range(20))
-    plt.axvline(average_goals, linestyle='dotted')
-    plt.show()
+    plt.axvline(average_goals, linestyle='--', color='black')
+    return plt.show()
 
 
-simulation_test(team_1, team_2, 100000)
+simulation_test()
